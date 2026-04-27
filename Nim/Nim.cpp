@@ -47,6 +47,8 @@ int main() {
 
 
 string receive(SOCKET s, int secondsToWait = 2, sockaddr_in peer = {}) {
+	cout << "Start receive\n";
+
 	int recvbuflen = DEFAULT_BUFLEN;
 	char recvbuf[DEFAULT_BUFLEN];
 		
@@ -54,6 +56,8 @@ string receive(SOCKET s, int secondsToWait = 2, sockaddr_in peer = {}) {
 	while (secondsWaited < secondsToWait) {
 		// go through everything waiting in buffer
 		while (wait(s, 0, 0)) {
+			cout << "in inner while loop\n";
+
 			sockaddr_in incomingAddr;
 			int incomingAddrSize = sizeof(incomingAddr);
 
@@ -66,15 +70,26 @@ string receive(SOCKET s, int secondsToWait = 2, sockaddr_in peer = {}) {
 			if (peer.sin_addr.S_un.S_addr == INADDR_ANY || // dont filter
 				(incomingAddr.sin_addr.S_un.S_addr == peer.sin_addr.S_un.S_addr &&
 				incomingAddr.sin_port == peer.sin_port)) {
-				return string(recvbuf);
+				string received(recvbuf);
+				if (received == "") {
+					cout << "Received empty string\n";
+				}
+				else {
+					cout << "rEceived something\n";
+				}
+
+
+				return received;
 			}			
 		}
 
+		cout << "Seconds waited: " << secondsWaited << '\n';
 		wait(s, 1, 0);
+		cout << "waited a second\n";
 		secondsWaited++;
 	}
 
-	return "";
+	return "i didnt receive anything";
 }
 
 
@@ -93,10 +108,25 @@ int send(SOCKET s, string msg, sockaddr_in peer) {
 	return 0;
 }
 
-void startGame(function<void(string)> send, function<string()> receive) {
-	send("this is a test");
-	cout << "I received: " << receive();
-
+void startGame(function<void(string)> send, function<string()> receive, bool goFirst) {
+	if (goFirst) {
+		// Host: send first, then wait
+		string input;
+		cout << "Input for send test: ";
+		cin >> input;
+		send(input);
+		string s = receive();
+		cout << "I received: " << s << '\n';
+	}
+	else {
+		// Joiner: wait first, then respond
+		string s = receive();
+		cout << "I received: " << s << '\n';
+		string input;
+		cout << "Input for send test: ";
+		cin >> input;
+		send(input);
+	}
 }
 
 
@@ -170,7 +200,7 @@ int host(string name) {
 			strcpy_s(sendbuf, DEFAULT_BUFLEN, NIM_NAME);
 			strcat_s(sendbuf, DEFAULT_BUFLEN, name.c_str());
 		}
-		else if (_strnicmp(recvbuf, "test", 5) == 0) {
+		else if (_stricmp(recvbuf, "test") == 0) {
 			string testString;
 			cout << "Input for send test: ";
 			cin >> testString;
@@ -240,7 +270,7 @@ int host(string name) {
 					return receive(s, 30, peer);
 				};
 
-				startGame(boundSend, boundReceive);
+				startGame(boundSend, boundReceive, true);
 			}
 
 
@@ -398,7 +428,7 @@ int join(string name) {
 			};
 
 
-		startGame(boundSend, boundReceive);
+		startGame(boundSend, boundReceive, false);
 
 	}
 
