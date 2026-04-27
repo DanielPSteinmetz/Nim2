@@ -1,12 +1,27 @@
 #include <iostream>
 #include <WS2tcpip.h>
 #include <string>
+#include <vector>
 #include <functional>
 #include "Nim.h"
 
 #pragma comment(lib, "Ws2_32.lib")
 
 using namespace std;
+
+int numPiles;
+vector<int> piles;
+
+bool isServer{ true };
+bool gameOver = false;
+bool turn;
+bool CheckPiles();
+void CreatePile(string board);
+void UpdateBoard(string move);
+void EndGame(bool def = false);
+
+string msg;
+string blank;
 
 int host(string name);
 int join(string name);
@@ -27,7 +42,6 @@ int main() {
 		cout << "Response: ";
 		cin >> userChoice;
 
-		string blank;
 		getline(cin, blank);
 
 
@@ -95,31 +109,67 @@ int send(SOCKET s, string msg, sockaddr_in peer) {
 	return 0;
 }
 
-void startGame(function<void(string)> send, function<string()> receive, bool goFirst) {
-	if (goFirst) {
-		// Host: send first, then wait
-		string input;
-		cout << "Input for send test: ";
-		cin >> input;
-		send(input);
-		string s = receive();
-		cout << "I received: " << s << '\n';
+void startGame(function<void(string)> send, function<string()> receive, bool isServer) {
+	if (isServer)
+	{
+		turn = false;
+		bool validBoard = false;
+		while (!validBoard)
+		{
+			getline(cin, msg);
+			if (msg.size() - 1 != (msg.at(0) - '0') * 2)
+			{
+				cout << "Invalid Board\n";
+			}
+			else
+			{
+				CreatePile(msg);
+				if (!CheckPiles())
+				{
+					cout << "Invalid Board\n";
+				}
+				else
+				{
+					validBoard = true;
+				}
+			}
+		}
+		send(msg);
 	}
-	else {
-		// Joiner: wait first, then respond
-		string s = receive();
-		cout << "I received: " << s << '\n';
-		string input;
-		cout << "Input for send test: ";
-		cin >> input;
-		send(input);
+	else
+	{
+		CreatePile(receive());
+		if (!CheckPiles())
+		{
+			EndGame(true);
+		}
+		turn = true;
+		getline(cin, msg);
+		UpdateBoard(msg);
+		send(msg);
+		turn = false;
 	}
-}
 
+	cout << numPiles << endl;
+	for (int i : piles)
+	{
+		cout << i << " ";
+	}
 
+	cout << endl;
 
-void gameOver() {
-	cout << "You win by default.\n";
+	while (!gameOver)
+	{
+		msg = receive();
+		UpdateBoard(msg);
+		if (gameOver) break;
+		turn = true;
+		getline(cin, blank);
+		getline(cin, msg);
+		UpdateBoard(msg);
+		send(msg);
+		turn = false;
+	}
 }
 
 
@@ -180,6 +230,7 @@ int host(string name) {
 
 		// save the address that sent to us
 		sockaddr_in peer = senderAddr;
+		string peerName;
 
 
 		if (_stricmp(recvbuf, NIM_QUERY) == 0) {
@@ -187,8 +238,8 @@ int host(string name) {
 			strcat_s(sendbuf, DEFAULT_BUFLEN, name.c_str());
 		}
 		else if (_strnicmp(recvbuf, NIM_CHALLENGE, 7) == 0) {
-			string name(recvbuf);
-			name = name.substr(7); //name of player challenging us (Player=____)
+			peerName = string(recvbuf);
+			peerName = name.substr(7); //name of player challenging us (Player=____)
 			string response = "";
 
 			cout << "You have been challenged by " + name << '\n';
@@ -229,6 +280,7 @@ int host(string name) {
 				
 			// If didn't receive "GREAT", continue listening
 			if (confirm != NIM_CONFIRM) {
+				cout << peerName << " disconnected unexpectedly.\n";
 				continue;
 			}
 
@@ -247,6 +299,7 @@ int host(string name) {
 				return receive(s, 30, peer);
 			};
 
+			cout << "debug: starging game";
 			startGame(boundSend, boundReceive, true);
 			break;
 		}
@@ -260,6 +313,7 @@ int host(string name) {
 
 
 // ************************************************************************************************
+
 
 int join(string name) {
 
@@ -400,4 +454,153 @@ int join(string name) {
 	WSACleanup();
 
 	return -1;
+}
+
+
+// ************************************************************************************************
+// ************************************************************************************************
+
+
+bool CheckPiles()
+{
+	if (numPiles < 3 || numPiles > 9) return false;
+
+	for (int i = 0; i < numPiles - 1; i++)
+	{
+		if (piles.at(i) < 1 || piles.at(i) > 20) return false;
+	}
+
+	return true;
+}
+
+void CreatePile(string board)
+{
+	numPiles = board[0] - '0';
+	piles.resize(numPiles);
+
+	int pilesIndex = 0;
+	for (int i = 1; i <= numPiles * 2; i += 2)
+	{
+		if (board[i] - '0' == 1)
+		{
+			piles.at(pilesIndex) += (board[i + 1] - '0') + 10;
+		}
+		else if (board[i] - '0' == 2)
+		{
+			piles.at(pilesIndex) += (board[i + 1] - '0') + 20;
+		}
+		else if (board[i] - '0' > 2)
+		{
+			piles.at(pilesIndex) += 21;
+		}
+		else
+		{
+			piles.at(pilesIndex) += board[i + 1] - '0';
+		}
+		pilesIndex++;
+	}
+}
+
+void UpdateBoard(string move)
+{
+	int selectedPile = move[0] - '0';
+
+	while (selectedPile - 1 >= numPiles || selectedPile - 1 < 0)
+	{
+		cout << "Pile doesn't exist. Choose another pile.\n";
+		getline(cin, msg);
+		while (msg.size() != 1)
+		{
+			cout << "Please enter a single digit.\n";
+			getline(cin, msg);
+		}
+		selectedPile = msg[0] - '0';
+	}
+
+	while (piles.at(selectedPile - 1) == 0)
+	{
+		cout << "Empty Pile. Choose another pile.\n";
+		getline(cin, msg);
+		while (msg.size() != 1)
+		{
+			cout << "Please enter a single digit.\n";
+			getline(cin, msg);
+		}
+		selectedPile = msg[0] - '0';
+	}
+
+	int rocksRemove = 0;
+	if (move[1] - '0' == 1)
+	{
+		rocksRemove += (move[2] - '0') + 10;
+	}
+	else if (move[1] - '0' == 2)
+	{
+		rocksRemove += (move[2] - '0') + 20;
+	}
+	else if (move[1] - '0' > 2)
+	{
+		rocksRemove += 21;
+	}
+	else
+	{
+		rocksRemove += move[2] - '0';
+	}
+
+	while (rocksRemove > piles.at(selectedPile - 1) || rocksRemove <= 0)
+	{
+		cout << "Unable to remove " << rocksRemove << " rocks. Choose another amount.\n";
+		getline(cin, msg);
+		while (msg.size() != 2)
+		{
+			cout << "Please enter two digits.\n";
+			getline(cin, msg);
+		}
+		rocksRemove = 0;
+		if (msg[0] - '0' == 1)
+		{
+			rocksRemove += (msg[1] - '0') + 10;
+		}
+		else if (msg[0] - '0' == 2)
+		{
+			rocksRemove += (msg[1] - '0') + 20;
+		}
+		else if (msg[0] - '0' > 2)
+		{
+			rocksRemove += 21;
+		}
+		else
+		{
+			rocksRemove += msg[1] - '0';
+		}
+	}
+
+	piles.at(selectedPile - 1) -= rocksRemove;
+
+	bool empty = true;
+	for (int i : piles)
+	{
+		if (i != 0) empty = false;
+	}
+
+	for (int i : piles)
+	{
+		cout << i << " ";
+	}
+
+	cout << endl;
+
+	if (empty)
+	{
+		EndGame();
+	}
+}
+
+void EndGame(bool def)
+{
+	if (def) cout << "You win by default\n";
+
+	if (turn) cout << "You win!\n";
+	else cout << "You lose\n";
+	gameOver = true;
 }
