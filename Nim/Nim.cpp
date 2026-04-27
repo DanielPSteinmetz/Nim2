@@ -456,7 +456,7 @@ int join(string name) {
 			}
 			};
 		auto boundReceive = [&]() {
-			return receive(s, 30, servers[serverSelected].addr);
+			return receive(s, 200, servers[serverSelected].addr);
 			};
 
 		getline(cin, blank);
