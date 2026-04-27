@@ -123,7 +123,7 @@ void startGame(function<void(string)> send, function<string()> receive, bool isS
 
 
 			getline(cin, msg);
-			if (msg.size() - 1 != (msg.at(0) - '0') * 2)
+			if (msg.size() == 0 || msg.size() - 1 != (msg.at(0) - '0') * 2)
 			{
 				cout << "Invalid Board\n";
 			}
@@ -306,7 +306,7 @@ int host(string name) {
 				}
 			};
 			auto boundReceive = [&]() {
-				return receive(s, 30, peer);
+				return receive(s, 200, peer); // BUG
 			};
 
 			cout << "debug: starging game";
