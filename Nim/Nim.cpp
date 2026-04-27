@@ -1,8 +1,8 @@
-#include "Nim.h"
 #include <iostream>
 #include <WS2tcpip.h>
 #include <string>
 #include <functional>
+#include "Nim.h"
 
 #pragma comment(lib, "Ws2_32.lib")
 
@@ -47,7 +47,6 @@ int main() {
 
 
 string receive(SOCKET s, int secondsToWait = 2, sockaddr_in peer = {}) {
-	cout << "Start receive\n";
 
 	int recvbuflen = DEFAULT_BUFLEN;
 	char recvbuf[DEFAULT_BUFLEN];
@@ -56,7 +55,6 @@ string receive(SOCKET s, int secondsToWait = 2, sockaddr_in peer = {}) {
 	while (secondsWaited < secondsToWait) {
 		// go through everything waiting in buffer
 		while (wait(s, 0, 0)) {
-			cout << "in inner while loop\n";
 
 			sockaddr_in incomingAddr;
 			int incomingAddrSize = sizeof(incomingAddr);
@@ -70,28 +68,17 @@ string receive(SOCKET s, int secondsToWait = 2, sockaddr_in peer = {}) {
 			if (peer.sin_addr.S_un.S_addr == INADDR_ANY || // dont filter
 				(incomingAddr.sin_addr.S_un.S_addr == peer.sin_addr.S_un.S_addr &&
 				incomingAddr.sin_port == peer.sin_port)) {
-				string received(recvbuf);
-				if (received == "") {
-					cout << "Received empty string\n";
-				}
-				else {
-					cout << "rEceived something\n";
-				}
 
-
-				return received;
+				return string(recvbuf);
 			}			
 		}
 
-		cout << "Seconds waited: " << secondsWaited << '\n';
 		wait(s, 1, 0);
-		cout << "waited a second\n";
 		secondsWaited++;
 	}
 
-	return "i didnt receive anything";
+	return "";
 }
-
 
 int send(SOCKET s, string msg, sockaddr_in peer) {
 	
@@ -168,9 +155,6 @@ int host(string name) {
 
 
 	// INIT BUFFERS
-	string received;
-	string toSend;
-
 	int recvbuflen = DEFAULT_BUFLEN;
 	char recvbuf[DEFAULT_BUFLEN];
 	char sendbuf[DEFAULT_BUFLEN];
@@ -182,7 +166,9 @@ int host(string name) {
 
 	bool acceptChallenge = false;
 
+	cout << "Waiting for someone to send a challenge\n";
 	while (true) {
+		// wait until something is in the socket
 		while (wait(s, 1, 0) == 0) {}
 		
 		iResult = recvfrom(s, recvbuf, recvbuflen, 0, (SOCKADDR*)&senderAddr, &senderAddrSize);
@@ -199,12 +185,6 @@ int host(string name) {
 		if (_stricmp(recvbuf, NIM_QUERY) == 0) {
 			strcpy_s(sendbuf, DEFAULT_BUFLEN, NIM_NAME);
 			strcat_s(sendbuf, DEFAULT_BUFLEN, name.c_str());
-		}
-		else if (_stricmp(recvbuf, "test") == 0) {
-			string testString;
-			cout << "Input for send test: ";
-			cin >> testString;
-			strcpy_s(sendbuf, DEFAULT_BUFLEN, testString.c_str());
 		}
 		else if (_strnicmp(recvbuf, NIM_CHALLENGE, 7) == 0) {
 			string name(recvbuf);
@@ -241,51 +221,45 @@ int host(string name) {
 		}
 
 
-		// after saying yes, look for "GREAT"
+		// look for confirm after challenge
 		if (acceptChallenge) {
-			wait(s, 1, 0);
-			iResult = recvfrom(s, recvbuf, recvbuflen, 0, (SOCKADDR*)&senderAddr, &senderAddrSize);
-			if (iResult < 0) {
-				cout << "recv() failed: " << WSAGetLastError() << endl;
-			}
-			// Only listen for the client that challenged us
-			if (senderAddr.sin_addr.S_un.S_addr == peer.sin_addr.S_un.S_addr &&
-				senderAddr.sin_port == peer.sin_port) {
+
+			// look for "GREAT"
+			string confirm = receive(s, 2, peer);
 				
-				// If didn't receive "GREAT", continue listening
-				if (_stricmp(recvbuf, NIM_CONFIRM) != 0) {
-					continue;
-				}
-
-				auto boundSend = [&](string msg) {
-					int result = send(s, msg, peer);
-					if (result) {
-						cout << "send() failed: " << WSAGetLastError() << endl;
-						closesocket(s);
-						WSACleanup();
-						return 1;
-					}
-				};
-				auto boundReceive = [&]() {
-					return receive(s, 30, peer);
-				};
-
-				startGame(boundSend, boundReceive, true);
+			// If didn't receive "GREAT", continue listening
+			if (confirm != NIM_CONFIRM) {
+				continue;
 			}
 
 
+			// bind send & receive and start game
+			auto boundSend = [&](string msg) {
+				int result = send(s, msg, peer);
+				if (result) {
+					cout << "send() failed: " << WSAGetLastError() << endl;
+					closesocket(s);
+					WSACleanup();
+					return 1;
+				}
+			};
+			auto boundReceive = [&]() {
+				return receive(s, 30, peer);
+			};
+
+			startGame(boundSend, boundReceive, true);
+			break;
 		}
 	}
 
 	closesocket(s);
 	WSACleanup();
 
-	return 0;
+	return -1;
 }
 
 
 // ************************************************************************************************
-
 
 int join(string name) {
 
@@ -353,10 +327,10 @@ int join(string name) {
 			WSACleanup();
 			return -1;
 		}
-
-		cout << "Challenge sent to " << serverSelected << ".\n";
-
 		serverSelected -= 1;
+
+		cout << "Challenge sent to " << servers[serverSelected].name << ".\n";
+
 
 
 		// Send challenge
@@ -376,34 +350,22 @@ int join(string name) {
 
 
 		// Receive response to challenge
-		wait(s, 10, 0); // wait 10 sec for YES/NO
-		iResult = recvfrom(s, recvbuf, recvbuflen, 0, (SOCKADDR*)&senderAddr, &senderAddrSize);
-		if (iResult < 0) {
-			cout << "recv() failed: " << WSAGetLastError() << endl;
-		}
-
-		// Filter only our server
-		if (senderAddr.sin_addr.S_un.S_addr == servers[serverSelected].addr.sin_addr.S_un.S_addr &&
-			senderAddr.sin_port == servers[serverSelected].addr.sin_port) {
-			cout << recvbuf << '\n';
-		}
-		else {
-			// If we didn't receive from our server, its the same as "NO"
-			continue;
-		}
+		string response = receive(s, 10, servers[serverSelected].addr);
 
 		// If they say no (anything non-yes)
-		if (_stricmp(recvbuf, "YES") != 0) {
+		if (_stricmp(response.c_str(), "YES") != 0) {
+			cout << servers[serverSelected].name << " did not accept your challenge.\n";
 			continue;
 		}
 
 		// They said YES
 
+		cout << servers[serverSelected].name << " accepted your challenge!";
+
 		acceptedChallenge = true;
 
 		// send "GREAT!"
-		strcpy_s(sendbuf, DEFAULT_BUFLEN, NIM_CONFIRM);
-		iResult = sendto(s, sendbuf, (int)strlen(sendbuf) + 1, 0, (SOCKADDR*)&servers[serverSelected].addr, sizeof(servers[serverSelected].addr));
+		iResult = send(s, NIM_CONFIRM, servers[serverSelected].addr);
 		if (iResult == SOCKET_ERROR) {
 			cout << "send() failed: " << WSAGetLastError() << endl;
 			closesocket(s);
@@ -437,5 +399,5 @@ int join(string name) {
 	closesocket(s);
 	WSACleanup();
 
-	return 0;
+	return -1;
 }

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <WinSock2.h>
-
 #define MAX_NAME         80 
 #define MAX_SERVERS      100
 #define DEFAULT_BUFLEN   512
