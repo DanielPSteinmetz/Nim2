@@ -41,6 +41,7 @@ int main() {
 		cout << "3. Exit\n";
 		cout << "Response: ";
 		cin >> userChoice;
+		cout << endl;
 
 		getline(cin, blank);
 
@@ -174,7 +175,6 @@ void startGame(function<void(string)> send, function<string()> receive, bool isS
 		UpdateBoard(msg);
 		if (gameOver) break;
 		turn = true;
-		getline(cin, blank);
 		getline(cin, msg);
 		UpdateBoard(msg);
 		send(msg);
@@ -309,11 +309,6 @@ int host(string name) {
 				return receive(s, 200, peer); // BUG
 			};
 
-			cout << "debug: starging game";
-			getline(cin, blank);
-			if (blank != "") {
-				cout << "Oops, shouldn't have put " << blank << " in blank\n";
-			}
 			startGame(boundSend, boundReceive, true);
 			break;
 		}
@@ -428,7 +423,7 @@ int join(string name) {
 
 		// They said YES
 
-		cout << servers[serverSelected].name << " accepted your challenge!";
+		cout << servers[serverSelected].name << " accepted your challenge!\n\n";
 
 		acceptedChallenge = true;
 
@@ -459,12 +454,7 @@ int join(string name) {
 			return receive(s, 200, servers[serverSelected].addr);
 			};
 
-		getline(cin, blank);
-		if (blank != "") {
-			cout << "Oops, shouldn't have put " << blank << " in blank\n";
-		}
 		startGame(boundSend, boundReceive, false);
-
 	}
 
 	
@@ -532,12 +522,30 @@ std::vector<int> CreateMove(string move) {
 	msg = move;
 	int selectedPile = msg[0] - '0';
 	int rocksRemove = 0;
+	if (move[1] - '0' == 1)
+	{
+		rocksRemove += (msg[2] - '0') + 10;
+	}
+	else if (msg[1] - '0' == 2)
+	{
+		rocksRemove += (msg[2] - '0') + 20;
+	}
+	else if (msg[1] - '0' > 2)
+	{
+		rocksRemove += 21;
+	}
+	else
+	{
+		rocksRemove += msg[2] - '0';
+	}
 
 	while (!isThreeDigits(msg), selectedPile > numPiles || selectedPile < 1 || piles.at(selectedPile - 1) == 0 || rocksRemove > piles.at(selectedPile - 1) || rocksRemove <= 0)
 	{
 		if (!isThreeDigits(msg)) {
 			cout << "Enter 3 digits.\n";
 			getline(cin, msg);
+			selectedPile = msg[0] - '0';
+			continue;
 		}
 
 		if (selectedPile > numPiles || selectedPile < 1) {
@@ -554,21 +562,21 @@ std::vector<int> CreateMove(string move) {
 		}
 
 		rocksRemove = 0;
-		if (move[1] - '0' == 1)
+		if (msg[1] - '0' == 1)
 		{
-			rocksRemove += (move[2] - '0') + 10;
+			rocksRemove += (msg[2] - '0') + 10;
 		}
-		else if (move[1] - '0' == 2)
+		else if (msg[1] - '0' == 2)
 		{
-			rocksRemove += (move[2] - '0') + 20;
+			rocksRemove += (msg[2] - '0') + 20;
 		}
-		else if (move[1] - '0' > 2)
+		else if (msg[1] - '0' > 2)
 		{
 			rocksRemove += 21;
 		}
 		else
 		{
-			rocksRemove += move[2] - '0';
+			rocksRemove += msg[2] - '0';
 		}
 
 		if (rocksRemove > piles.at(selectedPile - 1) || rocksRemove <= 0) {
@@ -601,7 +609,6 @@ void UpdateBoard(string move)
 	{
 		cout << i << " ";
 	}
-
 	cout << endl;
 
 	if (empty)
