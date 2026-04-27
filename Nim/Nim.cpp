@@ -170,6 +170,12 @@ int host(string name) {
 			strcpy_s(sendbuf, DEFAULT_BUFLEN, NIM_NAME);
 			strcat_s(sendbuf, DEFAULT_BUFLEN, name.c_str());
 		}
+		else if (_strnicmp(recvbuf, "test", 5) == 0) {
+			string testString;
+			cout << "Input for send test: ";
+			cin >> testString;
+			strcpy_s(sendbuf, DEFAULT_BUFLEN, testString.c_str());
+		}
 		else if (_strnicmp(recvbuf, NIM_CHALLENGE, 7) == 0) {
 			string name(recvbuf);
 			name = name.substr(7); //name of player challenging us (Player=____)
