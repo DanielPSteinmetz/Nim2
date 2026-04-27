@@ -17,8 +17,9 @@ bool gameOver = false;
 bool turn;
 bool CheckPiles();
 void CreatePile(string board);
+bool ValidMove(string move);
 void UpdateBoard(string move);
-void EndGame(bool def = false);
+void EndGame(char type = 'n');
 
 string msg;
 string blank;
@@ -95,6 +96,29 @@ string receive(SOCKET s, int secondsToWait = 2, sockaddr_in peer = {}) {
 	return "";
 }
 
+string receiveAndHandleMessage(function<string()> receive) {
+	string received = receive();
+
+	if (received.size() == 0) {
+		EndGame('d');
+	}
+	else if (tolower(received[0] == 'f')) {
+		EndGame('f');
+	}
+	else if (tolower(received[0]) == 'c') {
+		cout << "Opponent: " << received.substr(1);
+		return receiveAndHandleMessage(receive);
+	}
+	else if (isdigit(received[0])) {
+		if (ValidMove(received)) {
+			return received;
+		}
+		else {
+			EndGame('d');
+		}
+	}
+}
+
 int send(SOCKET s, string msg, sockaddr_in peer) {
 	
 	char sendbuf[DEFAULT_BUFLEN];
@@ -145,7 +169,7 @@ void startGame(function<void(string)> send, function<string()> receive, bool isS
 		CreatePile(receive());
 		if (!CheckPiles())
 		{
-			EndGame(true);
+			EndGame('d');
 		}
 
 		cout << numPiles << endl;
@@ -518,6 +542,35 @@ bool isThreeDigits(string s) {
 	return true;
 }
 
+bool ValidMove(string move) {
+	msg = move;
+	int selectedPile = msg[0] - '0';
+	int rocksRemove = 0;
+	if (move[1] - '0' == 1)
+	{
+		rocksRemove += (msg[2] - '0') + 10;
+	}
+	else if (msg[1] - '0' == 2)
+	{
+		rocksRemove += (msg[2] - '0') + 20;
+	}
+	else if (msg[1] - '0' > 2)
+	{
+		rocksRemove += 21;
+	}
+	else
+	{
+		rocksRemove += msg[2] - '0';
+	}
+
+	if (!isThreeDigits(msg), selectedPile > numPiles || selectedPile < 1 || piles.at(selectedPile - 1) == 0 || rocksRemove > piles.at(selectedPile - 1) || rocksRemove <= 0)
+	{
+		return false;
+	}
+
+	return true;
+}
+
 std::vector<int> CreateMove(string move) {
 	msg = move;
 	int selectedPile = msg[0] - '0';
@@ -617,11 +670,17 @@ void UpdateBoard(string move)
 	}
 }
 
-void EndGame(bool def)
+// n=normal, f=forfeit, d=default
+void EndGame(char type = 'n')
 {
-	if (def) cout << "You win by default\n";
+	if (type == 'd') cout << "You win by default\n";
+	else if (type == 'f') cout << "Your opponent forfeited. You win!\n";
 
-	if (turn) cout << "You win!\n";
-	else cout << "You lose\n";
-	gameOver = true;
+	else /* type=='n' */ {
+		if (turn) cout << "You win!\n";
+		else cout << "You lose\n";
+		gameOver = true;
+	}
+
+	
 }
