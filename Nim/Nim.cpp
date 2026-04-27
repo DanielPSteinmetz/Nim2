@@ -110,18 +110,13 @@ int send(SOCKET s, string msg, sockaddr_in peer) {
 }
 
 void startGame(function<void(string)> send, function<string()> receive, bool isServer) {
-	cout << "start game\n";
 	if (isServer)
 	{
-		cout << "am server\n";
 
 		turn = false;
 		bool validBoard = false;
 		while (!validBoard)
 		{
-			cout << "in !validBoard loop\n";
-
-
 			getline(cin, msg);
 			if (msg.size() == 0 || msg.size() - 1 != (msg.at(0) - '0') * 2)
 			{
@@ -140,10 +135,8 @@ void startGame(function<void(string)> send, function<string()> receive, bool isS
 				}
 			}
 		}
-		cout << "bouta send\n";
 
 		send(msg);
-		cout << "sent\n";
 
 	}
 	else
@@ -159,7 +152,7 @@ void startGame(function<void(string)> send, function<string()> receive, bool isS
 		{
 			cout << i << " ";
 		}
-
+		cout << endl;
 
 		turn = true;
 		getline(cin, msg);
@@ -173,7 +166,6 @@ void startGame(function<void(string)> send, function<string()> receive, bool isS
 	{
 		cout << i << " ";
 	}
-
 	cout << endl;
 
 	while (!gameOver)
