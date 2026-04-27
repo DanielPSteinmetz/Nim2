@@ -153,6 +153,14 @@ void startGame(function<void(string)> send, function<string()> receive, bool isS
 		{
 			EndGame(true);
 		}
+
+		cout << numPiles << endl;
+		for (int i : piles)
+		{
+			cout << i << " ";
+		}
+
+
 		turn = true;
 		getline(cin, msg);
 		UpdateBoard(msg);
