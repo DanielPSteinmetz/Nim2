@@ -520,80 +520,75 @@ void CreatePile(string board)
 	}
 }
 
-void UpdateBoard(string move)
-{
-	int selectedPile = move[0] - '0';
-
-	while (selectedPile - 1 >= numPiles || selectedPile - 1 < 0)
-	{
-		cout << "Pile doesn't exist. Choose another pile.\n";
-		getline(cin, msg);
-		while (msg.size() != 1)
-		{
-			cout << "Please enter a single digit.\n";
-			getline(cin, msg);
-		}
-		selectedPile = msg[0] - '0';
+bool isThreeDigits(string s) {
+	if (s.length() != 3) return false;
+	for (char c : s) {
+		if (!isdigit(c)) return false;
 	}
+	return true;
+}
 
-	while (piles.at(selectedPile - 1) == 0)
-	{
-		cout << "Empty Pile. Choose another pile.\n";
-		getline(cin, msg);
-		while (msg.size() != 1)
-		{
-			cout << "Please enter a single digit.\n";
-			getline(cin, msg);
-		}
-		selectedPile = msg[0] - '0';
-	}
-
+std::vector<int> CreateMove(string move) {
+	msg = move;
+	int selectedPile = msg[0] - '0';
 	int rocksRemove = 0;
-	if (move[1] - '0' == 1)
-	{
-		rocksRemove += (move[2] - '0') + 10;
-	}
-	else if (move[1] - '0' == 2)
-	{
-		rocksRemove += (move[2] - '0') + 20;
-	}
-	else if (move[1] - '0' > 2)
-	{
-		rocksRemove += 21;
-	}
-	else
-	{
-		rocksRemove += move[2] - '0';
-	}
 
-	while (rocksRemove > piles.at(selectedPile - 1) || rocksRemove <= 0)
+	while (!isThreeDigits(msg), selectedPile > numPiles || selectedPile < 1 || piles.at(selectedPile - 1) == 0 || rocksRemove > piles.at(selectedPile - 1) || rocksRemove <= 0)
 	{
-		cout << "Unable to remove " << rocksRemove << " rocks. Choose another amount.\n";
-		getline(cin, msg);
-		while (msg.size() != 2)
-		{
-			cout << "Please enter two digits.\n";
+		if (!isThreeDigits(msg)) {
+			cout << "Enter 3 digits.\n";
 			getline(cin, msg);
 		}
+
+		if (selectedPile > numPiles || selectedPile < 1) {
+			cout << "Pile doesn't exist. Please try again.\n";
+			getline(cin, msg);
+			selectedPile = msg[0] - '0';
+			continue;
+		}
+		else if (piles.at(selectedPile - 1) == 0) {
+			cout << "Empty Pile. Please try again.\n";
+			getline(cin, msg);
+			selectedPile = msg[0] - '0';
+			continue;
+		}
+
 		rocksRemove = 0;
-		if (msg[0] - '0' == 1)
+		if (move[1] - '0' == 1)
 		{
-			rocksRemove += (msg[1] - '0') + 10;
+			rocksRemove += (move[2] - '0') + 10;
 		}
-		else if (msg[0] - '0' == 2)
+		else if (move[1] - '0' == 2)
 		{
-			rocksRemove += (msg[1] - '0') + 20;
+			rocksRemove += (move[2] - '0') + 20;
 		}
-		else if (msg[0] - '0' > 2)
+		else if (move[1] - '0' > 2)
 		{
 			rocksRemove += 21;
 		}
 		else
 		{
-			rocksRemove += msg[1] - '0';
+			rocksRemove += move[2] - '0';
+		}
+
+		if (rocksRemove > piles.at(selectedPile - 1) || rocksRemove <= 0) {
+			cout << "Unable to remove " << rocksRemove << " rocks. Please try again.\n";
+			getline(cin, msg);
+			selectedPile = msg[0] - '0';
+			continue;
 		}
 	}
 
+	return { selectedPile, rocksRemove };
+}
+
+void UpdateBoard(string move)
+{
+	vector<int> result = CreateMove(move);
+	
+	int selectedPile = result[0];
+	int rocksRemove = result[1];
+	
 	piles.at(selectedPile - 1) -= rocksRemove;
 
 	bool empty = true;
