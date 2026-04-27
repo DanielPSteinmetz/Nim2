@@ -110,12 +110,18 @@ int send(SOCKET s, string msg, sockaddr_in peer) {
 }
 
 void startGame(function<void(string)> send, function<string()> receive, bool isServer) {
+	cout << "start game\n";
 	if (isServer)
 	{
+		cout << "am server\n";
+
 		turn = false;
 		bool validBoard = false;
 		while (!validBoard)
 		{
+			cout << "in !validBoard loop\n";
+
+
 			getline(cin, msg);
 			if (msg.size() - 1 != (msg.at(0) - '0') * 2)
 			{
@@ -134,7 +140,11 @@ void startGame(function<void(string)> send, function<string()> receive, bool isS
 				}
 			}
 		}
+		cout << "bouta send\n";
+
 		send(msg);
+		cout << "sent\n";
+
 	}
 	else
 	{
@@ -239,7 +249,7 @@ int host(string name) {
 		}
 		else if (_strnicmp(recvbuf, NIM_CHALLENGE, 7) == 0) {
 			peerName = string(recvbuf);
-			peerName = name.substr(7); //name of player challenging us (Player=____)
+			peerName = peerName.substr(7); //name of player challenging us (Player=____)
 			string response = "";
 
 			cout << "You have been challenged by " + name << '\n';
@@ -300,6 +310,10 @@ int host(string name) {
 			};
 
 			cout << "debug: starging game";
+			getline(cin, blank);
+			if (blank != "") {
+				cout << "Oops, shouldn't have put " << blank << " in blank\n";
+			}
 			startGame(boundSend, boundReceive, true);
 			break;
 		}
@@ -419,6 +433,8 @@ int join(string name) {
 		acceptedChallenge = true;
 
 		// send "GREAT!"
+
+		// BUG broke here
 		iResult = send(s, NIM_CONFIRM, servers[serverSelected].addr);
 		if (iResult == SOCKET_ERROR) {
 			cout << "send() failed: " << WSAGetLastError() << endl;
@@ -443,7 +459,10 @@ int join(string name) {
 			return receive(s, 30, servers[serverSelected].addr);
 			};
 
-
+		getline(cin, blank);
+		if (blank != "") {
+			cout << "Oops, shouldn't have put " << blank << " in blank\n";
+		}
 		startGame(boundSend, boundReceive, false);
 
 	}
