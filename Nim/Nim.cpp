@@ -218,7 +218,7 @@ int host(string name) {
 		
 		iResult = recvfrom(s, recvbuf, recvbuflen, 0, (SOCKADDR*)&senderAddr, &senderAddrSize);
 		if (iResult < 0) {
-			cout << "recv() failed: " << WSAGetLastError() << endl;
+			//cout << "recv() failed: " << WSAGetLastError() << endl;
 		}
 
 		// save the address that sent to us
