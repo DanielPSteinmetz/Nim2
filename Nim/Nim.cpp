@@ -484,6 +484,7 @@ void Prompt(function<void(string)> send) {
 		// send message
 		cout << "Chat: ";
 		getline(cin, msg);
+		cout << '\n';
 		send("C" + msg + '\n');
 
 		// get move
