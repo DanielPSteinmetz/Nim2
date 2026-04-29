@@ -674,7 +674,12 @@ std::vector<int> CreateMove(string move) {
 			cout << "Empty Pile. Please try again.\n";
 		}
 		else if (rocksRemove > piles.at(selectedPile - 1) || rocksRemove <= 0) {
-			cout << "Unable to remove " << rocksRemove << " rocks. Please try again.\n";
+			if (rocksRemove > 20) {
+				cout << "Unable to remove that many rocks. Please try again.\n";
+			}
+			else {
+				cout << "Unable to remove " << rocksRemove << " rocks. Please try again.\n";
+			}
 		}
 
 		getline(cin, msg);
