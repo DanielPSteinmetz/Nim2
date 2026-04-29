@@ -459,7 +459,7 @@ void PrintBoard() {
 	{
 		cout << i << " ";
 	}
-	cout << endl;
+	cout << "\n\n";
 }
 
 // puts move in msg (may be invalid)
