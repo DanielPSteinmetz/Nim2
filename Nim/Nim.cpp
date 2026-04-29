@@ -23,6 +23,7 @@ bool ValidMove(string move);
 void UpdateBoard(string move);
 void EndGame(char type = 'n');
 bool isNDigits(string s, int numDigits);
+bool isDigits(string s);
 void startGame(function<void(string)> send, function<string()> receive, bool isServer);
 
 string msg;
@@ -134,7 +135,7 @@ string receiveAndHandleMessage(function<string()> receive) {
 	}
 	// move/board
 	else if (isdigit(received[0])) {
-		if (ValidMove(received) || isNDigits(received, 7)) {
+		if (ValidMove(received) || isDigits(received)) {
 			return received;
 		}
 		else {
@@ -445,6 +446,13 @@ bool isNDigits(string s, int numDigits) {
 	return true;
 }
 
+bool isDigits(string s) {
+	for (char c : s) {
+		if (!isdigit(c)) return false;
+	}
+	return true;
+}
+
 void PrintBoard() {
 	cout << "\nBoard:\n";
 	for (int i : piles)
@@ -525,7 +533,10 @@ void startGame(function<void(string)> send, function<string()> receive, bool isS
 	else // client start
 	{
 		cout << "Waiting for opponent.\n";
-		CreatePile(receive());
+		string r = receive();
+
+
+		CreatePile(r);
 		if (!CheckPiles())
 		{
 			EndGame('d');
